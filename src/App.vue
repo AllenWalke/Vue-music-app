@@ -1,23 +1,25 @@
 <template>
   <div id="app">
-     <m-header></m-header>
-     <tab></tab>
-     <keep-alive>
+      <m-header></m-header>
+      <tab></tab>
+      <keep-alive>
         <router-view></router-view>
-     </keep-alive>
-      
+      </keep-alive>
+      <player></player>
   </div>
 </template>
 
 <script type="text/ecmascript-6">
-  import MHeader from 'components/m-header/m-header.vue'
-  import Tab from 'components/tab/tab'
-  export default {
-    components:{
-      MHeader,
-      Tab
-    }
+import MHeader from "components/m-header/m-header.vue";
+import Tab from "components/tab/tab";
+import Player from "components/player/player";
+export default {
+  components: {
+    MHeader,
+    Tab,
+    Player
   }
+};
 </script>
 
 <style scoped lang="stylus" rel="stylesheet/stylus">
