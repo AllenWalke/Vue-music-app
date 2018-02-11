@@ -17,7 +17,11 @@
           <h1 class="title" v-html="currentSong.name"></h1>
           <h2 class="subtitle" v-html="currentSong.singer"></h2>
         </div>
-        <div class="middle">
+        <div class="middle" 
+             @touchstart="middleTouchStart"
+             @touchmove="middleTouchMove"
+             @touchend="middleTouchEnd"
+        >
           <div class="middle-l">
             <div class="cd-wrapper" ref="cdWrapper">
               <div class="cd" :class="cdCls">
@@ -25,8 +29,21 @@
               </div>
             </div>
           </div>
+          <scroll class="middle-r" ref="lyricList" :data="currentLyric&&currentLyric.lines">
+            <div class="lyric-wrapper">
+              <div v-if="currentLyric">
+                <p :class="{'current':currentLineNum===index}" ref="lyricLine" class="text" v-for="(line,index) in currentLyric.lines">
+                  {{line.txt}}
+                </p>
+              </div>
+            </div>
+          </scroll>
         </div>
         <div class="bottom">
+          <div class="dot-wrapper">
+            <span class="dot" :class="{'active':currentShow==='cd'}"></span>
+            <span class="dot" :class="{'active':currentShow==='lyric'}"></span>
+          </div>
           <div class="progress-wrapper">
             <span class="time time-l">{{format(currentTime)}}</span>
             <div class="progress-bar-wrapper">
@@ -85,15 +102,22 @@ import ProgressBar from "base/progress-bar/progress-bar";
 import ProgressCircle from "base/progress-circle/progress-circle";
 import { playMode } from "common/js/config";
 import { shuffle } from "common/js/util";
-
+import Lyric from "lyric-parser";
+import Scroll from "base/scroll/scroll";
 const transform = prefixStyle("transform");
 export default {
   data() {
     return {
       songReady: false,
       currentTime: 0,
-      radius: 32
+      radius: 32,
+      currentLyric: null,
+      currentLineNum: 0,
+      currentShow: "cd"
     };
+  },
+  created() {
+    this.touch = {};
   },
   computed: {
     cdCls() {
@@ -167,16 +191,16 @@ export default {
       }
       this.songReady = false;
     },
-    end(){
-      if(this.mode===playMode.loop){
-        this.loop()
-      }else{
-        this.next()
+    end() {
+      if (this.mode === playMode.loop) {
+        this.loop();
+      } else {
+        this.next();
       }
     },
-    loop(){
-      this.$refs.audio.currentTime=0
-      this.$refs.audio.play()
+    loop() {
+      this.$refs.audio.currentTime = 0;
+      this.$refs.audio.play();
     },
     ready() {
       this.songReady = true;
@@ -208,15 +232,55 @@ export default {
       } else {
         list = this.sequenceList;
       }
-      this.resetCurrentIndex(list)
-      this.setPlayList(list)
+      this.resetCurrentIndex(list);
+      this.setPlayList(list);
     },
-    resetCurrentIndex(list){
-      let index = list.findIndex((item)=>{
-        return item.id===this.currentSong.id
-      })
-      this.setCurrentIndex(index)
+    resetCurrentIndex(list) {
+      let index = list.findIndex(item => {
+        return item.id === this.currentSong.id;
+      });
+      this.setCurrentIndex(index);
     },
+    getLyric() {
+      this.currentSong.getLyric().then(lyric => {
+        this.currentLyric = new Lyric(lyric, this.handleLyric);
+        if (this.playing) {
+          this.currentLyric.play();
+        } else {
+          console.log(this.currentLyric);
+        }
+      });
+    },
+    handleLyric({ lineNum, txt }) {
+      this.currentLineNum = lineNum;
+      if (lineNum > 5) {
+        let lineEl = this.$refs.lyricLine[lineNum - 5];
+        this.$refs.lyricList.scrollToElement(lineEl, 1000);
+      } else {
+        this.$refs.lyricList.scrollTo(0, 0, 1000);
+      }
+    },
+    middleTouchStart(e) {
+      this.touch.initiated = true;
+      const touch = e.touches[0];
+      this.touch.startX = touch.pageX;
+      this.touch.startY = touch.pageY;
+    },
+    middleTouchMove(e) {
+      if (!this.touch.initiated) {
+        return;
+      }
+      const touch = e.touches[0];
+      const deltaX = touch.pageX - this.touch.startX;
+      const deltaY = touch.pageY - this.touch.startY;
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        return;
+      }
+      const left = this.currentShow === "cd" ? 0 : -window.innerWidth;
+      const width =Math.min(0,Math.max(-window.innerWidth,left+deltaX))
+      this.$refs.lyricList.$el.style[transform]=`translate3d(${width}px,0,0)`
+    },
+    middleTouchEnd() {},
     _pad(num, n = 2) {
       let len = num.toString().length;
       while (len < n) {
@@ -288,12 +352,13 @@ export default {
     })
   },
   watch: {
-    currentSong(newSong,oldSong) {
-      if(newSong.id===oldSong.id){
-        return
+    currentSong(newSong, oldSong) {
+      if (newSong.id === oldSong.id) {
+        return;
       }
       this.$nextTick(() => {
         this.$refs.audio.play();
+        this.getLyric();
       });
     },
     playing(newPlaying) {
@@ -305,7 +370,8 @@ export default {
   },
   components: {
     ProgressBar,
-    ProgressCircle
+    ProgressCircle,
+    Scroll
   }
 };
 </script>
