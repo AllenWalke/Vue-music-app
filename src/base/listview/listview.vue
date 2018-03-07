@@ -218,7 +218,7 @@
           color: $color-theme
     .list-fixed
       position: absolute
-      top: -1px
+      top: 0
       left: 0
       width: 100%
       .fixed-title
