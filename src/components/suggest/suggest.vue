@@ -57,6 +57,7 @@
           ret.push({...data.zhida,...{type:TYPE_SINGER}})
         }
         if(data.song){
+
           ret = ret.concat(data.song.list)
         }
         return ret
